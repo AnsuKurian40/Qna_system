@@ -1,0 +1,21 @@
+# Ignore system
+.Trash-0/
+
+# Graph data
+graph_storage/
+graph_storage_old/
+graph_store/
+
+# Models
+ollama_models/
+
+# Outputs
+*.html# GraphRAG project
+storage/
+*.log
+*.pyc
+__pycache__/
+.ipynb_checkpoints/
+.env
+*.h5
+*.ckpt

@@ -1,0 +1,127 @@
+"""
+Gemini API integration for Malayalam RAG system
+"""
+import google.generativeai as genai
+import os
+from typing import List
+
+class GeminiGenerator:
+    def __init__(self, api_key: str = None):
+        """
+        Initialize Gemini API
+        
+        Args:
+            api_key: Your Gemini API key. If None, tries to get from environment.
+        """
+        # Get API key
+        if api_key:
+            self.api_key = api_key
+        else:
+            self.api_key = os.getenv("GEMINI_API_KEY")
+            
+        if not self.api_key:
+            raise ValueError("Gemini API key not provided. Set GEMINI_API_KEY environment variable.")
+        
+        # Configure Gemini
+        genai.configure(api_key=self.api_key)
+        
+        # Available Gemini models
+        self.models = {
+            "gemini-1.5-pro": "Most capable for Malayalam",
+            "gemini-1.5-flash": "Faster, good for Malayalam",
+            "gemini-pro": "Original model"
+        }
+        
+        # Use Gemini 1.5 Pro (best for multilingual)
+        self.model_name = "gemini-1.5-pro"
+        self.model = genai.GenerativeModel(self.model_name)
+    
+    def generate_answer(self, question: str, context_chunks: List[str]) -> str:
+        """
+        Generate Malayalam answer using Gemini API
+        
+        Args:
+            question: User's question in Malayalam
+            context_chunks: List of retrieved text chunks
+            
+        Returns:
+            Answer in Malayalam
+        """
+        # Combine context chunks
+        context = "\n\n".join(context_chunks[:3])  # Use top 3 chunks
+        
+        # Create Malayalam-specific prompt
+        malayalam_prompt = f"""ഈ വിവരങ്ങൾ ഉപയോഗിച്ച് മാത്രം ചോദ്യത്തിന് ഉത്തരം നൽകുക.
+
+വിവരങ്ങൾ:
+{context}
+
+നിർദ്ദേശങ്ങൾ:
+1. വിവരങ്ങളിൽ നിന്ന് നേരിട്ട് ഉത്തരം നൽകുക
+2. വിവരങ്ങൾ പര്യാപ്തമല്ലെങ്കിൽ, "ഈ വിവരങ്ങളിൽ ഉത്തരം ഇല്ല" എന്ന് പറയുക
+3. ഉത്തരം മലയാളത്തിൽ മാത്രം നൽകുക
+4. ചുരുക്കമായി ഉത്തരം നൽകുക
+
+ചോദ്യം: {question}
+
+ഉത്തരം (മലയാളത്തിൽ):"""
+        
+        try:
+            # Generate response
+            response = self.model.generate_content(
+                malayalam_prompt,
+                generation_config={
+                    "temperature": 0.2,
+                    "top_p": 0.8,
+                    "top_k": 40,
+                    "max_output_tokens": 1000,
+                }
+            )
+            
+            # Extract answer
+            if response.text:
+                answer = response.text.strip()
+            else:
+                answer = "ഉത്തരം ലഭ്യമാക്കാനായില്ല."
+                
+            return answer
+            
+        except Exception as e:
+            error_msg = str(e)
+            if "quota" in error_msg.lower():
+                return "API ക്വോട്ട പൂർത്തിയായി. ദയവായി നാളെ വീണ്ടും ശ്രമിക്കുക."
+            elif "safety" in error_msg.lower():
+                return "സുരക്ഷാ നിയന്ത്രണങ്ങൾ കാരണം ഉത്തരം നൽകാനായില്ല."
+            else:
+                return f"Gemini API പിശക്: {error_msg[:100]}"
+
+# Helper function for quick testing
+def test_gemini(api_key: str):
+    """Test Gemini API with a simple Malayalam question"""
+    print("🧪 Testing Gemini API with Malayalam...")
+    
+    try:
+        generator = GeminiGenerator(api_key)
+        
+        # Simple test
+        test_context = [
+            "മലയാളം ഒരു ദ്രാവിഡ ഭാഷയാണ്. ഇത് പ്രധാനമായും കേരളത്തിൽ സംസാരിക്കപ്പെടുന്നു.",
+            "കേരളത്തിന്റെ തലസ്ഥാനം തിരുവനന്തപുരമാണ്."
+        ]
+        
+        test_question = "കേരളത്തിന്റെ തലസ്ഥാനം എന്താണ്?"
+        
+        answer = generator.generate_answer(test_question, test_context)
+        print(f"✅ Gemini test successful!")
+        print(f"Q: {test_question}")
+        print(f"A: {answer}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Gemini test failed: {e}")
+        return False
+
+if __name__ == "__main__":
+    # Quick test if run directly
+    api_key = input("Enter your Gemini API key: ").strip()
+    test_gemini(api_key)
