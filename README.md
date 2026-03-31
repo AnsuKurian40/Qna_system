@@ -1,5 +1,4 @@
-# QnA System - Retrieval-Augmented Generation with Graph RAG for Intelligent Question Answering
-
+# LLM-based Question Answering System for Malayalam Medium Curriculum: A GraphRAG Approach
 ## Problem Statement
 
 "To develop a GraphRAG-based Question Answering system for High School Malayalam medium curriculum."
